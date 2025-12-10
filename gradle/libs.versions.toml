@@ -8,6 +8,12 @@ material = "1.13.0"
 activity = "1.12.1"
 constraintlayout = "2.2.1"
 
+# CameraX
+cameraX = "1.4.2"
+
+# ML Kit
+mlkitObjectDetection = "17.0.1"
+
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -17,6 +23,14 @@ material = { group = "com.google.android.material", name = "material", version.r
 activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 
+# CameraX libraries
+camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraX" }
+camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "cameraX" }
+camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraX" }
+camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraX" }
+
+# ML Kit Object Detection
+objectDetection = { group = "com.google.mlkit", name = "object-detection", version.ref = "mlkitObjectDetection" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-
