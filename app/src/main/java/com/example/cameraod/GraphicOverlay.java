@@ -30,22 +30,22 @@ import java.util.Map;
  */
 public class GraphicOverlay extends View {
 
-    // Animation constants
-    private static final float LERP_FACTOR = 0.3f;  // Smooth interpolation speed
-    private static final float FADE_SPEED = 0.15f;  // Alpha fade speed
-    private static final long FADE_OUT_DELAY = 200; // ms before starting fade out
+    // Các hằng số Animation
+    private static final float LERP_FACTOR = 0.3f;  // Tốc độ nội suy (làm mượt chuyển động)
+    private static final float FADE_SPEED = 0.15f;  // Tốc độ làm mờ
+    private static final long FADE_OUT_DELAY = 200; // Thời gian chờ trước khi mờ dần (ms)
     
-    // Modern color palette with gradients
+    // Bảng màu Gradient hiện đại
     private static final int[][] GRADIENT_COLORS = {
-        {0xFF00D9FF, 0xFF0066FF},  // Cyan to Blue
-        {0xFFFF6B6B, 0xFFFF3366},  // Coral to Pink
-        {0xFF4FFFB0, 0xFF00CC66},  // Mint to Green
-        {0xFFFFD93D, 0xFFFF9500},  // Yellow to Orange
-        {0xFFB388FF, 0xFF8E24AA},  // Lavender to Purple
-        {0xFF64FFDA, 0xFF00BFA5},  // Teal Light to Teal
+        {0xFF00D9FF, 0xFF0066FF},  // Xanh Cyan sang Xanh Blue
+        {0xFFFF6B6B, 0xFFFF3366},  // San hô sang Hồng
+        {0xFF4FFFB0, 0xFF00CC66},  // Bạc hà sang Xanh lá
+        {0xFFFFD93D, 0xFFFF9500},  // Vàng sang Cam
+        {0xFFB388FF, 0xFF8E24AA},  // Tím nhạt sang Tím đậm
+        {0xFF64FFDA, 0xFF00BFA5},  // Teal nhạt sang Teal
     };
 
-    // Category to color mapping
+    // Ánh xạ danh mục sang màu sắc
     private static final Map<Integer, Integer> CATEGORY_COLOR_INDEX = new HashMap<>();
     static {
         CATEGORY_COLOR_INDEX.put(0, 0);
@@ -56,7 +56,7 @@ public class GraphicOverlay extends View {
         CATEGORY_COLOR_INDEX.put(5, 5);
     }
 
-    // Vietnamese translations
+    // Từ điển dịch sang Tiếng Việt
     private static final Map<String, String> VIETNAMESE_LABELS = new HashMap<>();
     static {
         VIETNAMESE_LABELS.put("Food", "Thực phẩm");
@@ -81,7 +81,7 @@ public class GraphicOverlay extends View {
         VIETNAMESE_LABELS.put("Mouse", "Chuột");
     }
 
-    // Animated box class for smooth transitions
+    // Lớp nội bộ xử lý hiệu ứng khung bao (Inner Class)
     private static class AnimatedBox {
         int trackingId;
         RectF currentRect = new RectF();
@@ -110,13 +110,13 @@ public class GraphicOverlay extends View {
         }
 
         void animate() {
-            // Smooth position interpolation
+            // Nội suy vị trí (Làm mượt)
             currentRect.left = lerp(currentRect.left, targetRect.left, LERP_FACTOR);
             currentRect.top = lerp(currentRect.top, targetRect.top, LERP_FACTOR);
             currentRect.right = lerp(currentRect.right, targetRect.right, LERP_FACTOR);
             currentRect.bottom = lerp(currentRect.bottom, targetRect.bottom, LERP_FACTOR);
 
-            // Smooth alpha interpolation
+            // Nội suy độ mờ
             alpha = lerp(alpha, targetAlpha, FADE_SPEED);
         }
 
@@ -134,34 +134,34 @@ public class GraphicOverlay extends View {
         }
     }
 
-    // Cached paints for performance
+    // Các đối tượng Paint (Cache để tối ưu hiệu năng)
     private final Paint boxPaint;
     private final Paint glowPaint;
     private final Paint textPaint;
     private final Paint textBgPaint;
     private final Paint cornerPaint;
     
-    // Reusable objects to reduce allocations
+    // Các biến tái sử dụng (Tránh cấp phát bộ nhớ liên tục)
     private final RectF tempRect = new RectF();
     private final Rect textBounds = new Rect();
     private final Path cornerPath = new Path();
 
-    // Animated boxes map (trackingId -> AnimatedBox)
+    // Map lưu trữ các khung hình đang hiển thị (trackingId -> AnimatedBox)
     private final Map<Integer, AnimatedBox> animatedBoxes = new HashMap<>();
-    private int nextTempId = -1; // For objects without tracking ID
+    private int nextTempId = -1; // ID tạm cho vật thể không có tracking ID
 
-    // Image dimensions
+    // Kích thước ảnh gốc từ Camera
     private int imageWidth = 0;
     private int imageHeight = 0;
     private int imageRotation = 0;
 
-    // Transformation values
+    // Các thông số biến đổi tọa độ
     private float scaleX = 1f;
     private float scaleY = 1f;
     private float offsetX = 0f;
     private float offsetY = 0f;
 
-    // Animation timing
+    // Thời gian Animation
     private long lastFrameTime = 0;
     private boolean needsAnimation = false;
 
@@ -176,10 +176,10 @@ public class GraphicOverlay extends View {
     public GraphicOverlay(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
-        // Enable hardware acceleration
+        // Bật tăng tốc phần cứng
         setLayerType(LAYER_TYPE_HARDWARE, null);
 
-        // Pre-create paints for performance
+        // Khởi tạo trước các bút vẽ (Paints) để hiệu năng tốt hơn
         boxPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         boxPaint.setStyle(Paint.Style.STROKE);
         boxPaint.setStrokeWidth(4f);
@@ -204,7 +204,7 @@ public class GraphicOverlay extends View {
     }
 
     public void setDetectionResults(List<DetectedObject> objects, int imgWidth, int imgHeight, int rotation) {
-        // Update dimensions if changed
+        // Cập nhật kích thước ảnh nếu thay đổi
         if (imageWidth != imgWidth || imageHeight != imgHeight || imageRotation != rotation) {
             imageWidth = imgWidth;
             imageHeight = imgHeight;
@@ -212,33 +212,33 @@ public class GraphicOverlay extends View {
             updateTransformationValues();
         }
 
-        // Mark all existing boxes as inactive
+        // Đánh dấu tất cả khung cũ là "không hoạt động"
         for (AnimatedBox box : animatedBoxes.values()) {
             box.isActive = false;
         }
 
-        // Update or create animated boxes
+        // Cập nhật hoặc tạo mới khung (Animated Boxes)
         if (objects != null) {
             for (int i = 0; i < objects.size(); i++) {
                 DetectedObject obj = objects.get(i);
                 Integer trackingId = obj.getTrackingId();
                 
-                // Use temp ID if no tracking ID
+                // Dùng ID tạm nếu không có Tracking ID
                 int id = trackingId != null ? trackingId : (nextTempId--);
 
-                // Get or create animated box
+                // Lấy hoặc tạo mới Hộp thoại
                 AnimatedBox animBox = animatedBoxes.get(id);
                 if (animBox == null) {
                     animBox = new AnimatedBox(id);
-                    // Initialize position at target for new boxes
+                    // Đặt vị trí ban đầu tại mục tiêu cho hộp mới
                     transformRect(obj.getBoundingBox(), animBox.currentRect);
                     animatedBoxes.put(id, animBox);
                 }
 
-                // Transform and update target
+                // Biến đổi tọa độ và cập nhật mục tiêu
                 transformRect(obj.getBoundingBox(), tempRect);
                 
-                // Get label and color
+                // Lấy nhãn và màu sắc
                 String label = "Vật thể";
                 float confidence = 0f;
                 int colorIndex = i % GRADIENT_COLORS.length;
@@ -255,7 +255,7 @@ public class GraphicOverlay extends View {
             }
         }
 
-        // Start fade out for inactive boxes
+        // Bắt đầu làm mờ các khung không còn hoạt động
         long now = System.currentTimeMillis();
         for (AnimatedBox box : animatedBoxes.values()) {
             if (!box.isActive && box.targetAlpha > 0 && 
@@ -320,7 +320,7 @@ public class GraphicOverlay extends View {
             return;
         }
 
-        // Animate all boxes
+        // Chạy animation cho tất cả các hộp
         boolean stillAnimating = false;
         Iterator<Map.Entry<Integer, AnimatedBox>> iterator = animatedBoxes.entrySet().iterator();
         
@@ -328,24 +328,24 @@ public class GraphicOverlay extends View {
             AnimatedBox box = iterator.next().getValue();
             box.animate();
 
-            // Remove fully faded boxes
+            // Xóa các hộp đã mờ hẳn
             if (box.shouldRemove()) {
                 iterator.remove();
                 continue;
             }
 
-            // Check if still animating
+            // Kiểm tra xem có cần vẽ tiếp không
             if (Math.abs(box.alpha - box.targetAlpha) > 0.01f) {
                 stillAnimating = true;
             }
 
-            // Draw if visible
+            // Vẽ nếu còn nhìn thấy
             if (box.alpha > 0.01f && box.currentRect.width() > 10 && box.currentRect.height() > 10) {
                 drawAnimatedBox(canvas, box);
             }
         }
 
-        // Continue animation if needed
+        // Tiếp tục animation nếu cần
         if (stillAnimating || needsAnimation) {
             needsAnimation = false;
             postInvalidateOnAnimation();
@@ -359,12 +359,12 @@ public class GraphicOverlay extends View {
 
         RectF rect = box.currentRect;
 
-        // Draw glow effect
+        // Vẽ hiệu ứng phát sáng (Glow)
         glowPaint.setColor(primaryColor);
         glowPaint.setAlpha((int)(30 * box.alpha));
         canvas.drawRoundRect(rect, 16f, 16f, glowPaint);
 
-        // Draw main box with gradient
+        // Vẽ khung chính với màu Gradient
         LinearGradient gradient = new LinearGradient(
             rect.left, rect.top, rect.right, rect.bottom,
             primaryColor, secondaryColor, Shader.TileMode.CLAMP
@@ -374,10 +374,10 @@ public class GraphicOverlay extends View {
         canvas.drawRoundRect(rect, 12f, 12f, boxPaint);
         boxPaint.setShader(null);
 
-        // Draw corner accents
+        // Vẽ các góc nhấn (Accents)
         drawCornerAccents(canvas, rect, primaryColor, box.alpha);
 
-        // Draw label
+        // Vẽ nhãn (Label)
         drawLabel(canvas, box.label, box.confidence, rect, primaryColor, secondaryColor, box.alpha);
     }
 
@@ -444,7 +444,7 @@ public class GraphicOverlay extends View {
             bgBottom = rect.bottom + textHeight + padding * 2 + 8;
         }
 
-        // Draw background
+        // Vẽ nền (Background)
         LinearGradient bgGradient = new LinearGradient(
             bgLeft, bgTop, bgRight, bgBottom,
             primaryColor, secondaryColor, Shader.TileMode.CLAMP
@@ -456,7 +456,7 @@ public class GraphicOverlay extends View {
         canvas.drawRoundRect(tempRect, 8f, 8f, textBgPaint);
         textBgPaint.setShader(null);
 
-        // Draw text
+        // Vẽ chữ (Text)
         textPaint.setAlpha((int)(255 * alpha));
         canvas.drawText(displayLabel, bgLeft + padding, bgBottom - padding - 2, textPaint);
     }

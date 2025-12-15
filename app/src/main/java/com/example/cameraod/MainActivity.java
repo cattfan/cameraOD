@@ -40,22 +40,22 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "CameraOD";
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
-    private static final float CONFIDENCE_THRESHOLD = 0.4f;
+    private static final float CONFIDENCE_THRESHOLD = 0.3f; // Đã hạ xuống để bắt được nhiều phân loại hơn
 
-    // Views
+    // Khai báo các biến View
     private PreviewView previewView;
     private GraphicOverlay graphicOverlay;
     private TextView fpsTextView;
     private TextView objectCountTextView;
 
-    // Camera
+    // Biến quản lý Camera
     private ProcessCameraProvider cameraProvider;
     private ExecutorService cameraExecutor;
 
-    // ML Kit Object Detector
+    // Bộ nhận diện vật thể ML Kit
     private ObjectDetector objectDetector;
 
-    // FPS calculation
+    // Biến tính toán FPS
     private long lastFpsUpdateTime = 0;
     private int frameCount = 0;
 
@@ -65,26 +65,26 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // Handle system insets
+        // Xử lý giao diện Edge-to-Edge (Tràn viền)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
-        // Initialize views
+        // Ánh xạ Views
         previewView = findViewById(R.id.previewView);
         graphicOverlay = findViewById(R.id.graphicOverlay);
         fpsTextView = findViewById(R.id.fpsTextView);
         objectCountTextView = findViewById(R.id.objectCountTextView);
 
-        // Initialize camera executor
+        // Khởi tạo luồng xử lý Camera (Background Thread)
         cameraExecutor = Executors.newSingleThreadExecutor();
 
-        // Initialize ML Kit Object Detector
+        // Khởi tạo ML Kit Object Detector
         initializeObjectDetector();
 
-        // Check camera permission
+        // Kiểm tra quyền Camera tại thời điểm chạy (Runtime Permission)
         if (hasCameraPermission()) {
             startCamera();
         } else {
@@ -93,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Initialize ML Kit ObjectDetector.
+     * Khởi tạo ML Kit ObjectDetector.
      */
     private void initializeObjectDetector() {
         ObjectDetectorOptions options = new ObjectDetectorOptions.Builder()
@@ -141,7 +141,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Start CameraX with Preview and ImageAnalysis use cases.
+     * Khởi động CameraX với chế độ Preview (Xem trước) và ImageAnalysis (Phân tích ảnh).
      */
     private void startCamera() {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
@@ -159,7 +159,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Bind Preview and ImageAnalysis use cases to camera lifecycle.
+     * Gắn kết các Use Case (Preview, Analysis) vào vòng đời Camera.
      */
     private void bindCameraUseCases() {
         if (cameraProvider == null) {
@@ -167,36 +167,36 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Get screen rotation
+        // Lấy góc xoay màn hình hiện tại
         int rotation = previewView.getDisplay() != null ? 
                 previewView.getDisplay().getRotation() : 0;
 
-        // Unbind any existing use cases
+        // Hủy liên kết các use case cũ trước khi gắn mới
         cameraProvider.unbindAll();
 
-        // Camera selector - use back camera
+        // Bộ chọn Camera - Sử dụng Camera sau
         CameraSelector cameraSelector = new CameraSelector.Builder()
                 .requireLensFacing(CameraSelector.LENS_FACING_BACK)
                 .build();
 
-        // Preview use case
+        // Use case 1: Preview (Hiển thị hình ảnh lên màn hình)
         Preview preview = new Preview.Builder()
                 .setTargetAspectRatio(AspectRatio.RATIO_16_9)
                 .setTargetRotation(rotation)
                 .build();
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
-        // Image analysis use case
+        // Use case 2: ImageAnalysis (Lấy dữ liệu ảnh để chạy AI)
         ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
                 .setTargetAspectRatio(AspectRatio.RATIO_16_9)
                 .setTargetRotation(rotation)
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST) // Chỉ lấy frame mới nhất
                 .build();
 
         imageAnalysis.setAnalyzer(cameraExecutor, this::analyzeImage);
 
         try {
-            // Bind use cases to camera
+            // Gắn kết tất cả vào vòng đời Activity
             cameraProvider.bindToLifecycle(
                     this,
                     cameraSelector,
@@ -211,7 +211,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Analyze each camera frame for object detection.
+     * Phân tích từng frame ảnh (Callback).
      */
     @androidx.camera.core.ExperimentalGetImage
     private void analyzeImage(@NonNull ImageProxy imageProxy) {
@@ -222,36 +222,42 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Get image dimensions and rotation
+        // Lấy kích thước và góc xoay của ảnh gốc
         int imageWidth = imageProxy.getWidth();
         int imageHeight = imageProxy.getHeight();
         int rotation = imageProxy.getImageInfo().getRotationDegrees();
 
-        // Create InputImage from ImageProxy
+        // Tạo đối tượng InputImage từ ImageProxy để ML Kit xử lý
         InputImage inputImage = InputImage.fromMediaImage(mediaImage, rotation);
 
-        // Run object detection
+        // Chạy nhận diện đối tượng
         objectDetector.process(inputImage)
                 .addOnSuccessListener(detectedObjects -> {
-                    // Filter by confidence threshold
+                    // Smart Filter: Hiển thị nếu ĐÃ PHÂN LOẠI hoặc (CHƯA PHÂN LOẠI nhưng KÍCH THƯỚC LỚN)
                     List<DetectedObject> filteredObjects = new ArrayList<>();
                     for (DetectedObject object : detectedObjects) {
-                        boolean passesThreshold = false;
+                        boolean isClassified = false;
+                        // Kiểm tra xem có nhãn nào đạt ngưỡng tin cậy không
                         for (DetectedObject.Label label : object.getLabels()) {
                             if (label.getConfidence() >= CONFIDENCE_THRESHOLD) {
-                                passesThreshold = true;
+                                isClassified = true;
                                 break;
                             }
                         }
-                        if (passesThreshold || object.getLabels().isEmpty()) {
+                        
+                        // Kiểm tra kích thước (phải chiếm > 20% chiều rộng ảnh nếu chưa được phân loại)
+                        boolean isLargeEnough = object.getBoundingBox().width() > (imageWidth * 0.2f);
+
+                        // Điều kiện: Đã phân loại HOẶC Là vật thể lớn
+                        if (isClassified || (object.getLabels().isEmpty() && isLargeEnough)) {
                             filteredObjects.add(object);
                         }
                     }
 
-                    // Debug log
+                    // Log kiểm tra
                     Log.d(TAG, "Detection: " + filteredObjects.size() + " objects");
 
-                    // Update overlay on main thread
+                    // Cập nhật giao diện trên Luồng chính (Main Thread)
                     final int count = filteredObjects.size();
                     runOnUiThread(() -> {
                         graphicOverlay.setDetectionResults(filteredObjects, imageWidth, imageHeight, rotation);
@@ -260,11 +266,11 @@ public class MainActivity extends AppCompatActivity {
                     });
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Detection failed", e))
-                .addOnCompleteListener(task -> imageProxy.close());
+                .addOnCompleteListener(task -> imageProxy.close()); // Quan trọng: Đóng frame ảnh để nhận frame tiếp theo
     }
 
     /**
-     * Update FPS counter display.
+     * Cập nhật bộ đếm FPS.
      */
     private void updateFps() {
         frameCount++;
